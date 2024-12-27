@@ -1,4 +1,5 @@
 ﻿using HighSchool_Management_System.Data;
+using HighSchool_Management_System.DTOs;
 using HighSchool_Management_System.Model;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -22,8 +23,15 @@ namespace HighSchool_Management_System.Controllers
         public async Task<ActionResult<IEnumerable<SchoolClass>>> GetSchoolClasses()
         {
             var schoolClasses = await _context.SchoolClasses
-                .Include(sc => sc.FormTeacher) // Eagerly load FormTeacher
-                .Include(sc => sc.Students) // Eagerly load Students
+                .Include(sc => sc.FormTeacher)
+                .Include(sc => sc.Students)
+                .Select(sc => new SchoolClassDto
+                {
+                    SchoolClassId = sc.SchoolClassId,
+                    ClassName = sc.ClassName,
+                    FormTeacherName = sc.FormTeacher != null ? sc.FormTeacher.Name : null, // Null check
+                    StudentNames = sc.Students.Select(s => s.Name).ToList()
+                })
                 .ToListAsync();
 
             return Ok(schoolClasses);
