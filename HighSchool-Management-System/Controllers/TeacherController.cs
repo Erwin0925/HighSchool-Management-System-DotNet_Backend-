@@ -1,7 +1,7 @@
 ﻿using HighSchool_Management_System.Data;
 using HighSchool_Management_System.DTOs;
 using HighSchool_Management_System.Model;
-using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -18,6 +18,34 @@ namespace HighSchool_Management_System.Controllers
             _context = context;
         }
 
+        [HttpPost]
+        public async Task<ActionResult<TeacherDto>> CreateTeacher(TeacherDto teacherDto)
+        {
+            // Map the TeacherDto to the Teacher entity
+            var teacher = new Teacher
+            {
+                Name = teacherDto.Name,
+                Email = teacherDto.Email,
+                Phone = teacherDto.Phone,
+                Subject = teacherDto.Subject
+            };
+
+            _context.Teachers.Add(teacher);
+            await _context.SaveChangesAsync();
+
+            // Map the newly created Teacher entity back to TeacherDto for the response
+            var createdTeacherDto = new TeacherDto
+            {
+                TeacherId = teacher.TeacherId,
+                Name = teacher.Name,
+                Email = teacher.Email,
+                Phone = teacher.Phone,
+                Subject = teacher.Subject
+            };
+
+            return CreatedAtAction(nameof(GetTeacherById), new { id = teacher.TeacherId }, createdTeacherDto);
+        }
+        
         // GET: api/Teacher
         [HttpGet]
         public async Task<ActionResult<IEnumerable<TeacherDto>>> GetTeachers()
@@ -36,6 +64,120 @@ namespace HighSchool_Management_System.Controllers
                 .ToListAsync();
 
             return Ok(teachers);
+        }
+
+        // GET: api/Teacher/{id}
+        [HttpGet("{id}")]
+        public async Task<ActionResult<TeacherDto>> GetTeacherById(int id)
+        {
+            var teacher = await _context.Teachers
+                .Include(t => t.FormClass) // Eagerly load FormClass
+                .Where(t => t.TeacherId == id)
+                .Select(t => new TeacherDto
+                {
+                    TeacherId = t.TeacherId,
+                    Name = t.Name,
+                    Email = t.Email,
+                    Phone = t.Phone,
+                    Subject = t.Subject,
+                    FormClassName = t.FormClass != null ? t.FormClass.ClassName : null // Null check
+                })
+                .FirstOrDefaultAsync();
+
+            if (teacher == null)
+            {
+                return NotFound();
+            }
+
+            return Ok(teacher);
+        }
+
+        [HttpPut("{id}")]
+        public async Task<IActionResult> UpdateTeacher(int id, TeacherDto teacherDto)
+        {
+            if (id != teacherDto.TeacherId)
+            {
+                return BadRequest("Teacher ID mismatch.");
+            }
+
+            var teacher = await _context.Teachers.FindAsync(id);
+            if (teacher == null)
+            {
+                return NotFound();
+            }
+
+            // Update all fields of the teacher
+            teacher.Name = teacherDto.Name;
+            teacher.Email = teacherDto.Email;
+            teacher.Phone = teacherDto.Phone;
+            teacher.Subject = teacherDto.Subject;
+
+            try
+            {
+                await _context.SaveChangesAsync();
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                if (!_context.Teachers.Any(t => t.TeacherId == id))
+                {
+                    return NotFound();
+                }
+                throw;
+            }
+
+            return NoContent();
+        }
+
+        [HttpPatch("{id}")]
+        public async Task<IActionResult> PatchTeacher(int id, [FromBody] JsonPatchDocument<Teacher> patchDoc)
+        {
+            if (patchDoc == null)
+            {
+                return BadRequest("Invalid patch document.");
+            }
+
+            var teacher = await _context.Teachers.FindAsync(id);
+            if (teacher == null)
+            {
+                return NotFound();
+            }
+
+            patchDoc.ApplyTo(teacher, error =>
+            {
+                ModelState.AddModelError(error.AffectedObject.ToString(), error.ErrorMessage);
+            });
+
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            await _context.SaveChangesAsync();
+
+            return NoContent();
+        }
+
+        [HttpDelete("{id}")]
+        public async Task<ActionResult<TeacherDto>> DeleteTeacher(int id)
+        {
+            var teacher = await _context.Teachers
+                .Include(t => t.FormClass)
+                .FirstOrDefaultAsync(t => t.TeacherId == id);
+
+            if (teacher == null)
+            {
+                return NotFound();
+            }
+
+            if (teacher.FormClass != null)
+            {
+                return BadRequest("Cannot delete this teacher because they are assigned as a FormTeacher.");
+            }
+
+            _context.Teachers.Remove(teacher);
+            await _context.SaveChangesAsync();
+
+            return Ok("Deleted Successfully");
         }
     }
 }

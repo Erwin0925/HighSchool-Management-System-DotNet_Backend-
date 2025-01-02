@@ -1,7 +1,6 @@
 ﻿using HighSchool_Management_System.Data;
 using HighSchool_Management_System.DTOs;
 using HighSchool_Management_System.Model;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
