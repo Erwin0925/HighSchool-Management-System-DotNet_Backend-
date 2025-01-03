@@ -19,24 +19,23 @@ namespace HighSchool_Management_System.Controllers
         }
 
         [HttpPost]
-        public async Task<ActionResult<TeacherDto>> CreateTeacher(TeacherDto teacherDto)
+        public async Task<ActionResult<TeacherDtoForPost>> CreateTeacher(TeacherDtoForPost TeacherDtoForPost)
         {
             // Map the TeacherDto to the Teacher entity
             var teacher = new Teacher
             {
-                Name = teacherDto.Name,
-                Email = teacherDto.Email,
-                Phone = teacherDto.Phone,
-                Subject = teacherDto.Subject
+                Name = TeacherDtoForPost.Name,
+                Email = TeacherDtoForPost.Email,
+                Phone = TeacherDtoForPost.Phone,
+                Subject = TeacherDtoForPost.Subject
             };
 
             _context.Teachers.Add(teacher);
             await _context.SaveChangesAsync();
 
             // Map the newly created Teacher entity back to TeacherDto for the response
-            var createdTeacherDto = new TeacherDto
+            var createdTeacherDto = new TeacherDtoForPost
             {
-                TeacherId = teacher.TeacherId,
                 Name = teacher.Name,
                 Email = teacher.Email,
                 Phone = teacher.Phone,
@@ -48,17 +47,18 @@ namespace HighSchool_Management_System.Controllers
         
         // GET: api/Teacher
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<TeacherDto>>> GetTeachers()
+        public async Task<ActionResult<IEnumerable<TeacherDtoForGet>>> GetTeachers()
         {
             var teachers = await _context.Teachers
                 .Include(t => t.FormClass) // Eagerly load FormClass
-                .Select(t => new TeacherDto
+                .Select(t => new TeacherDtoForGet
                 {
                     TeacherId = t.TeacherId,
                     Name = t.Name,
                     Email = t.Email,
                     Phone = t.Phone,
                     Subject = t.Subject,
+                    FormClassId = t.FormClass != null ? t.FormClass.SchoolClassId : (int?)null, // Null check and correct property
                     FormClassName = t.FormClass != null ? t.FormClass.ClassName : null // Null check
                 })
                 .ToListAsync();
@@ -68,19 +68,20 @@ namespace HighSchool_Management_System.Controllers
 
         // GET: api/Teacher/{id}
         [HttpGet("{id}")]
-        public async Task<ActionResult<TeacherDto>> GetTeacherById(int id)
+        public async Task<ActionResult<TeacherDtoForGet>> GetTeacherById(int id)
         {
             var teacher = await _context.Teachers
                 .Include(t => t.FormClass) // Eagerly load FormClass
                 .Where(t => t.TeacherId == id)
-                .Select(t => new TeacherDto
+                .Select(t => new TeacherDtoForGet
                 {
                     TeacherId = t.TeacherId,
                     Name = t.Name,
                     Email = t.Email,
                     Phone = t.Phone,
                     Subject = t.Subject,
-                    FormClassName = t.FormClass != null ? t.FormClass.ClassName : null // Null check
+                    FormClassId = t.FormClass != null ? t.FormClass.SchoolClassId : (int?)null, // Null check and correct property
+                    FormClassName = t.FormClass != null ? t.FormClass.ClassName : null // Replaced null propagating operator
                 })
                 .FirstOrDefaultAsync();
 
@@ -93,13 +94,8 @@ namespace HighSchool_Management_System.Controllers
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateTeacher(int id, TeacherDto teacherDto)
+        public async Task<IActionResult> UpdateTeacher(int id, TeacherDtoForPost TeacherDtoForPost)
         {
-            if (id != teacherDto.TeacherId)
-            {
-                return BadRequest("Teacher ID mismatch.");
-            }
-
             var teacher = await _context.Teachers.FindAsync(id);
             if (teacher == null)
             {
@@ -107,10 +103,10 @@ namespace HighSchool_Management_System.Controllers
             }
 
             // Update all fields of the teacher
-            teacher.Name = teacherDto.Name;
-            teacher.Email = teacherDto.Email;
-            teacher.Phone = teacherDto.Phone;
-            teacher.Subject = teacherDto.Subject;
+            teacher.Name = TeacherDtoForPost.Name;
+            teacher.Email = TeacherDtoForPost.Email;
+            teacher.Phone = TeacherDtoForPost.Phone;
+            teacher.Subject = TeacherDtoForPost.Subject;
 
             try
             {
@@ -158,7 +154,7 @@ namespace HighSchool_Management_System.Controllers
         }
 
         [HttpDelete("{id}")]
-        public async Task<ActionResult<TeacherDto>> DeleteTeacher(int id)
+        public async Task<ActionResult<TeacherDtoForGet>> DeleteTeacher(int id)
         {
             var teacher = await _context.Teachers
                 .Include(t => t.FormClass)

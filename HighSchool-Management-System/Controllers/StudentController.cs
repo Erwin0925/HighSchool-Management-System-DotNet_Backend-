@@ -1,6 +1,4 @@
-﻿using System.Numerics;
-using System.Reflection;
-using HighSchool_Management_System.Data;
+﻿using HighSchool_Management_System.Data;
 using HighSchool_Management_System.DTOs;
 using HighSchool_Management_System.Model;
 using Microsoft.AspNetCore.JsonPatch;
@@ -21,22 +19,22 @@ namespace HighSchool_Management_System.Controllers
         }
 
         [HttpPost]
-        public async Task<ActionResult<StudentDtoForGet>> CreateStudent(StudentDtoForPost studentDto)
+        public async Task<ActionResult<StudentDtoForPost>> CreateStudent(StudentDtoForPost StudentDtoForPost)
         {
-            var schoolClass = await _context.SchoolClasses.FindAsync(studentDto.SchoolClassId);
+            var schoolClass = await _context.SchoolClasses.FindAsync(StudentDtoForPost.SchoolClassId);
             if (schoolClass == null)
             {
-                return NotFound($"School class with ID {studentDto.SchoolClassId} not found.");
+                return NotFound($"School class with ID {StudentDtoForPost.SchoolClassId} not found.");
             }
 
             var student = new Student
             {
-                Name = studentDto.Name,
-                Dob = studentDto.Dob,
-                Gender = studentDto.Gender,
-                Email = studentDto.Email,
-                Phone = studentDto.Phone,
-                SchoolClassId = studentDto.SchoolClassId
+                Name = StudentDtoForPost.Name,
+                Dob = StudentDtoForPost.Dob,
+                Gender = StudentDtoForPost.Gender,
+                Email = StudentDtoForPost.Email,
+                Phone = StudentDtoForPost.Phone,
+                SchoolClassId = StudentDtoForPost.SchoolClassId
             };
 
             _context.Students.Add(student);
@@ -49,15 +47,14 @@ namespace HighSchool_Management_System.Controllers
                 Gender = student.Gender,
                 Email = student.Email,
                 Phone = student.Phone,
-                SchoolClassId = (int)student.SchoolClassId,
+                SchoolClassId = student.SchoolClass.SchoolClassId,
             };
 
             return CreatedAtAction(nameof(GetStudentById), new { id = student.StudentId }, createdStudentDto);
         }
 
-        // GET: api/Student
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Student>>> GetStudents()
+        public async Task<ActionResult<IEnumerable<StudentDtoForGet>>> GetStudents()
         {
             var students = await _context.Students
                         .Include(s => s.SchoolClass)
@@ -171,7 +168,7 @@ namespace HighSchool_Management_System.Controllers
         }
 
         [HttpDelete("{id}")]
-        public async Task<ActionResult<StudentDtoForGet>> DeleteStudent(int id)
+        public async Task<ActionResult<Student>> DeleteStudent(int id)
         {
             var student = await _context.Students.FindAsync(id);
 
