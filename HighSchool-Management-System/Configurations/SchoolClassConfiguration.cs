@@ -11,8 +11,10 @@ namespace HighSchool_Management_System.Configurations
             builder.HasKey(c => c.SchoolClassId);
 
             builder.Property(c => c.ClassName)
-                   .IsRequired()
                    .HasMaxLength(50);
+
+            builder.HasIndex(c => c.ClassName)
+                   .IsUnique();
 
             builder.HasMany(c => c.Students)
                    .WithOne(s => s.SchoolClass)
